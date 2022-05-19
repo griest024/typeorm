@@ -1069,6 +1069,24 @@ export class EntityMetadataBuilder {
         })
     }
 
+    private isClassNameInProtoChain (name: string, target: string | Function): boolean {
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        const functionProto = Object.getPrototypeOf(() => {});
+
+        function getParentNames (target: any): string[] {
+          const parent = Object.getPrototypeOf(target);
+          return parent && parent !== functionProto
+            ? [
+              parent.name,
+              ...getParentNames(parent),
+            ]
+            : [];
+        }
+        const names = getParentNames(target);
+
+        return names.includes(name);
+      }
+
     /**
      * Computes entity metadata's relations inverse side properties.
      */
@@ -1083,7 +1101,10 @@ export class EntityMetadataBuilder {
                     m.target === relation.type ||
                     (typeof relation.type === "string" &&
                         (m.targetName === relation.type ||
-                            m.givenTableName === relation.type)),
+                            m.givenTableName === relation.type ||
+                            this.isClassNameInProtoChain(relation.type, m.target)
+                        )
+                    ),
             )
             if (!inverseEntityMetadata)
                 throw new TypeORMError(
